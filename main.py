@@ -55,7 +55,7 @@ async def startup_event():
             
             for job in jobs:
                 try:
-                    cronservice.sync_job_to_cron(job.command, job.name, job.schedule)
+                    cronservice.sync_job_to_cron(job.command, job.name, job.schedule, job.id)
                     logger.info(f"  ✅ Job '{job.name}' synchronisé")
                 except Exception as e:
                     logger.error(f"  ❌ Erreur lors de la synchronisation du job '{job.name}': {e}")
@@ -161,11 +161,17 @@ async def create_job(job_request: JobRequest, db: Session = Depends(get_db)):
     job.name = job_request.name
     job.schedule = job_request.schedule
     try:
-        cronservice.add_cron_job(job.command, job.name, job.schedule)
-        job.next_run = cronservice.get_next_schedule(job.name)
+        # D'abord ajouter à la DB pour obtenir l'ID
         db.add(job)
         db.commit()
+        db.refresh(job)  # Récupérer l'ID généré
+        
+        # Ensuite ajouter au crontab avec l'ID
+        cronservice.add_cron_job(job.command, job.name, job.schedule, job.id)
+        job.next_run = cronservice.get_next_schedule(job.name)
+        db.commit()
     except ValueError:
+        db.rollback()
         raise HTTPException(status_code=404, detail="Invalid Cron Expression")
     return job_request
 
@@ -175,11 +181,14 @@ async def update_job(
     job_id: int, job_request: JobRequest, db: Session = Depends(get_db)
 ):
     existing_job = db.query(Job).filter(Job.id == job_id)
+    old_name = existing_job.first().name
+    
     cronservice.update_cron_job(
         job_request.command,
         job_request.name,
         job_request.schedule,
-        existing_job.first().name,
+        old_name,
+        job_id
     )
     existing_job.update(job_request.__dict__)
     existing_job.update({"next_run": cronservice.get_next_schedule(job_request.name)})

@@ -18,20 +18,20 @@ _user = getpass.getuser()
 _cron = CronTab(user=_user)
 
 
-def add_cron_job(comm: Command, name: Name, sched: Schedule) -> None:
+def add_cron_job(comm: Command, name: Name, sched: Schedule, job_id: int) -> None:
     if croniter.is_valid(sched):
-        job = _cron.new(command=add_log_file(comm, name), comment=name)
+        job = _cron.new(command=add_log_file(comm, name, job_id), comment=name)
         job.setall(sched)
         _cron.write()
     else:
         raise ValueError("Invalid Cron Expression")
 
 
-def update_cron_job(comm: Command, name: Name, sched: Schedule, old_name: Name) -> None:
+def update_cron_job(comm: Command, name: Name, sched: Schedule, old_name: Name, job_id: int) -> None:
     match = _cron.find_comment(old_name)
     job = list(match)[0]
     job.setall(sched)
-    job.set_command(add_log_file(comm, name))
+    job.set_command(add_log_file(comm, name, job_id))
     job.set_comment(name)
     _cron.write()
 
@@ -212,7 +212,7 @@ def get_next_schedule(name: Name) -> str:
         return None
 
 
-def sync_job_to_cron(comm: Command, name: Name, sched: Schedule) -> None:
+def sync_job_to_cron(comm: Command, name: Name, sched: Schedule, job_id: int) -> None:
     """Synchronise un job de la DB vers le crontab système"""
     # Vérifier si le job existe déjà dans le crontab
     existing_jobs = list(_cron.find_comment(name))
@@ -221,11 +221,11 @@ def sync_job_to_cron(comm: Command, name: Name, sched: Schedule) -> None:
         # Mettre à jour le job existant
         job = existing_jobs[0]
         job.setall(sched)
-        job.set_command(add_log_file(comm, name))
+        job.set_command(add_log_file(comm, name, job_id))
     else:
         # Créer un nouveau job
         if croniter.is_valid(sched):
-            job = _cron.new(command=add_log_file(comm, name), comment=name)
+            job = _cron.new(command=add_log_file(comm, name, job_id), comment=name)
             job.setall(sched)
     
     _cron.write()
