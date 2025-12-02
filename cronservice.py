@@ -146,6 +146,17 @@ import subprocess
 import sys
 import os
 import signal
+import logging
+
+# Configuration du logging
+logging.basicConfig(
+    filename='/tmp/crontab_wrapper_{job_id}.log',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+logger.info("Wrapper started for job {job_id}")
 
 # Ignorer SIGHUP pour survivre à la fermeture de la session parent
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -153,19 +164,26 @@ signal.signal(signal.SIGHUP, signal.SIG_IGN)
 lock_file = "/tmp/crontab_job_{job_id}.lock"
 
 try:
+    command = {repr(command)}
+    logger.info(f"Executing command: {{command}}")
+    
     # Exécuter la commande via shell
     result = subprocess.run(
-        {repr(command)},
+        command,
         shell=True,
         capture_output=False
     )
+    
+    logger.info(f"Command finished with return code: {{result.returncode}}")
     sys.exit(result.returncode)
 finally:
     # Nettoyer le lock
+    logger.info("Cleaning up lock file")
     try:
         os.remove(lock_file)
-    except:
-        pass
+        logger.info("Lock file removed")
+    except Exception as e:
+        logger.error(f"Failed to remove lock: {{e}}")
 """
         
         # Créer un fichier temporaire pour le script wrapper
@@ -191,6 +209,19 @@ finally:
         # Créer immédiatement le lock avec le PID du wrapper
         create_lock(job_id, pid)
         logger.info(f"Lock created for job {job_id} with PID {pid}")
+        
+        # Attendre 0.5s et vérifier que le process existe toujours
+        import time
+        time.sleep(0.5)
+        
+        if not psutil.pid_exists(pid):
+            release_lock(job_id)
+            logger.error(f"Wrapper process {pid} died immediately - check wrapper script")
+            return {
+                "success": False,
+                "message": "Le wrapper a échoué au démarrage. Vérifiez les logs.",
+                "pid": None
+            }
         
         # Ne pas attendre la fin du processus
         logger.info(f"Job {job_id} ({name}) launched successfully with PID {pid}")
