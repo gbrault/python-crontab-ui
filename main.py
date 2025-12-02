@@ -124,16 +124,35 @@ async def update_job(
 
 @app.get("/run_job/{job_id}/")
 async def run_job(job_id: int, db: Session = Depends(get_db)):
+    """
+    Lance un job manuellement en arrière-plan.
+    Retourne immédiatement avec le statut du lancement.
+    """
     chosen_job = db.query(Job).filter(Job.id == job_id).first()
-    chosen_name = chosen_job.name
-    cronservice.run_manually(chosen_name)
-    return {"msg": "Successfully run job."}
+    
+    if not chosen_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    result = cronservice.run_manually(chosen_job.name, job_id)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=409, detail=result["message"])
+    
+    return {
+        "success": True,
+        "message": result["message"],
+        "pid": result["pid"]
+    }
 
 
 @app.delete("/job/{job_id}/")
 async def delete_job(job_id: int, db: Session = Depends(get_db)):
     job_update = db.query(Job).filter(Job.id == job_id).first()
     cronservice.delete_cron_job(job_update.name)
+    
+    # Nettoyer le lock si le job était en cours d'exécution
+    cronservice.release_lock(job_id)
+    
     db.delete(job_update)
     db.commit()
     return {"INFO": f"Deleted {job_id} Successfully"}

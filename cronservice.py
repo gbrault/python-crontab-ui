@@ -2,6 +2,10 @@ from crontab import CronTab
 from croniter import croniter
 from datetime import datetime
 import getpass
+import subprocess
+import os
+import psutil
+from pathlib import Path
 
 from utils import add_log_file, Command, Name, Schedule, delete_log_file
 
@@ -34,10 +38,130 @@ def delete_cron_job(name: Name) -> None:
     delete_log_file(name)
 
 
-def run_manually(name: Name) -> None:
-    match = _cron.find_comment(name)
-    job = list(match)[0]
-    job.run()
+def get_lock_file_path(job_id: int) -> Path:
+    """Retourne le chemin du fichier lock pour un job"""
+    return Path(f"/tmp/crontab_job_{job_id}.lock")
+
+
+def is_job_running(job_id: int) -> tuple[bool, int | None]:
+    """
+    Vérifie si un job est déjà en cours d'exécution.
+    
+    Returns:
+        tuple: (is_running, pid) - True si le job tourne, False sinon, avec le PID ou None
+    """
+    lock_file = get_lock_file_path(job_id)
+    
+    if not lock_file.exists():
+        return False, None
+    
+    try:
+        with open(lock_file, 'r') as f:
+            pid = int(f.read().strip())
+        
+        # Vérifier si le process existe toujours
+        if psutil.pid_exists(pid):
+            try:
+                process = psutil.Process(pid)
+                # Vérifier que le process n'est pas un zombie
+                if process.status() != psutil.STATUS_ZOMBIE:
+                    return True, pid
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        
+        # Le process n'existe plus, nettoyer le lock
+        lock_file.unlink()
+        return False, None
+        
+    except (ValueError, FileNotFoundError):
+        # Fichier lock corrompu ou supprimé entre-temps
+        if lock_file.exists():
+            lock_file.unlink()
+        return False, None
+
+
+def create_lock(job_id: int, pid: int) -> None:
+    """Crée un fichier lock avec le PID du process"""
+    lock_file = get_lock_file_path(job_id)
+    with open(lock_file, 'w') as f:
+        f.write(str(pid))
+
+
+def release_lock(job_id: int) -> None:
+    """Supprime le fichier lock"""
+    lock_file = get_lock_file_path(job_id)
+    if lock_file.exists():
+        lock_file.unlink()
+
+
+def run_manually(name: Name, job_id: int) -> dict:
+    """
+    Lance un job manuellement en arrière-plan de manière non-bloquante.
+    
+    Returns:
+        dict: Informations sur le lancement (success, message, pid)
+    """
+    # Vérifier si le job est déjà en cours d'exécution
+    is_running, existing_pid = is_job_running(job_id)
+    if is_running:
+        return {
+            "success": False,
+            "message": f"Job already running with PID {existing_pid}",
+            "pid": existing_pid
+        }
+    
+    try:
+        # Récupérer la commande du job
+        match = _cron.find_comment(name)
+        job = list(match)[0]
+        command = job.command
+        
+        # Lancer le job en arrière-plan avec un wrapper pour gérer le lock
+        wrapper_script = f"""#!/bin/bash
+LOCK_FILE="/tmp/crontab_job_{job_id}.lock"
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+# Exécuter la commande
+{command}
+"""
+        
+        # Créer un fichier temporaire pour le script wrapper
+        wrapper_path = f"/tmp/crontab_wrapper_{job_id}.sh"
+        with open(wrapper_path, 'w') as f:
+            f.write(wrapper_script)
+        os.chmod(wrapper_path, 0o755)
+        
+        # Lancer le processus en arrière-plan détaché
+        process = subprocess.Popen(
+            ['/bin/bash', wrapper_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,  # Détache complètement le processus
+            preexec_fn=os.setpgrp  # Crée un nouveau groupe de processus
+        )
+        
+        pid = process.pid
+        
+        return {
+            "success": True,
+            "message": f"Job lancé en arrière-plan (PID: {pid}). Consultez les logs pour suivre l'exécution.",
+            "pid": pid
+        }
+        
+    except IndexError:
+        return {
+            "success": False,
+            "message": "Job not found in crontab",
+            "pid": None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error launching job: {str(e)}",
+            "pid": None
+        }
 
 
 def get_next_schedule(name: Name) -> str:
