@@ -25,14 +25,14 @@ $(document).ready(function () {
     fetch(`/run_job/${id}/`, {
       method: "GET",
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       cache: "no-cache",
     })
       .then((response) => {
         console.log("Response status:", response.status);
         console.log("Response headers:", response.headers);
-        
+
         // Lire le JSON même en cas d'erreur
         return response.json().then((data) => {
           return { status: response.status, data: data, ok: response.ok };
@@ -40,7 +40,7 @@ $(document).ready(function () {
       })
       .then(({ status, data, ok }) => {
         console.log("Parsed response:", { status, data, ok });
-        
+
         if (ok && data.success) {
           alert(`✅ ${data.message}`);
         } else if (status === 409) {
