@@ -57,25 +57,40 @@ def is_job_running(job_id: int) -> tuple[bool, int | None]:
     """
     lock_file = get_lock_file_path(job_id)
     
+    logger.debug(f"Checking lock file: {lock_file}, exists: {lock_file.exists()}")
+    
     if not lock_file.exists():
+        logger.debug(f"No lock file for job {job_id}")
         return False, None
     
     try:
         with open(lock_file, 'r') as f:
             pid = int(f.read().strip())
         
+        logger.debug(f"Lock file contains PID: {pid}")
+        
         # Vérifier si le process existe toujours
         if psutil.pid_exists(pid):
+            logger.debug(f"PID {pid} exists in system")
             try:
                 process = psutil.Process(pid)
+                status = process.status()
+                logger.debug(f"Process {pid} status: {status}")
                 # Vérifier que le process n'est pas un zombie
-                if process.status() != psutil.STATUS_ZOMBIE:
+                if status != psutil.STATUS_ZOMBIE:
+                    logger.info(f"Job {job_id} is running with PID {pid}")
                     return True, pid
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                else:
+                    logger.debug(f"Process {pid} is zombie, cleaning lock")
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                logger.debug(f"Process check failed: {e}")
                 pass
+        else:
+            logger.debug(f"PID {pid} does not exist")
         
         # Le process n'existe plus, nettoyer le lock
         lock_file.unlink()
+        logger.debug(f"Cleaned stale lock file for job {job_id}")
         return False, None
         
     except (ValueError, FileNotFoundError):
@@ -125,7 +140,7 @@ def run_manually(name: Name, job_id: int) -> dict:
         logger.info(f"Launching job {job_id} ({name}) in background")
         logger.debug(f"Command to execute: {command}")
         
-        # Créer un script Python wrapper qui gère le lock et l'exécution
+        # Créer un script Python wrapper qui gère l'exécution
         wrapper_script = f"""#!/usr/bin/env python3
 import subprocess
 import sys
@@ -136,16 +151,11 @@ import signal
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 lock_file = "/tmp/crontab_job_{job_id}.lock"
-pid = os.getpid()
-
-# Écrire le PID dans le fichier lock
-with open(lock_file, 'w') as f:
-    f.write(str(pid))
 
 try:
     # Exécuter la commande via shell
     result = subprocess.run(
-        {shlex.quote(command)},
+        {repr(command)},
         shell=True,
         capture_output=False
     )
@@ -177,6 +187,10 @@ finally:
         )
         
         pid = process.pid
+        
+        # Créer immédiatement le lock avec le PID du wrapper
+        create_lock(job_id, pid)
+        logger.info(f"Lock created for job {job_id} with PID {pid}")
         
         # Ne pas attendre la fin du processus
         logger.info(f"Job {job_id} ({name}) launched successfully with PID {pid}")
