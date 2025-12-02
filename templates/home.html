@@ -47,18 +47,14 @@
                 <pre><code class="bash">{{ job.status }}</code></pre>
             </td>
             <td>
-                <a href="/">
-                    <button type="button" class="ui grey basic button" value={{ job.id }}><i class="play icon"></i>
-                    </button>
-                </a>
+                <button type="button" class="ui grey basic button" value={{ job.id }}><i class="play icon"></i>
+                </button>
                 <a href="/jobs/{{ job.id }}" class="btn btn-primary">
                     <button type="button" class="ui inverted primary button">Update
                     </button>
                 </a>
-                <a href="/">
-                    <button id="delete" type="button" class="ui inverted red button" value={{ job.id }}>Delete
-                    </button>
-                </a>
+                <button id="delete" type="button" class="ui inverted red button" value={{ job.id }}>Delete
+                </button>
             </td>
             <td>
                 <a href="/logs/{{ job.id }}" class="btn btn-primary">

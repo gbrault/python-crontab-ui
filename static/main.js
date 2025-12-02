@@ -31,17 +31,31 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".ui.grey.basic.button").forEach((button) => {
     button.addEventListener("click", function (e) {
       e.preventDefault();
+      e.stopPropagation();
+
       const id = this.value;
       console.log(`Attempting to run job ${id}`);
-      console.log(`URL: ${window.location.origin}/run_job/${id}/`);
+
+      if (!id) {
+        console.error("No job ID found");
+        alert("❌ Erreur: ID du job non trouvé");
+        return;
+      }
 
       fetch(`/run_job/${id}/`, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
         cache: "no-cache",
+        credentials: "same-origin",
       })
         .then((response) => {
           console.log("Response status:", response.status);
+          if (!response.ok && response.status !== 409) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
           return response.json().then((data) => ({
             status: response.status,
             data: data,
@@ -65,7 +79,9 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch((error) => {
           console.error("Fetch error:", error);
-          alert(`❌ Erreur réseau: ${error.message}`);
+          alert(
+            `❌ Erreur réseau: ${error.message}\n\nVérifiez la console (F12) pour plus de détails.`
+          );
         });
     });
   });
