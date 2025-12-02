@@ -212,7 +212,7 @@ async def run_job(job_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Job not found")
         
         logger.info(f"Running job {job_id}: {chosen_job.name}")
-        result = cronservice.run_manually(chosen_job.name, job_id)
+        result = cronservice.run_manually(chosen_job.name, job_id, chosen_job.command)
         
         if not result["success"]:
             logger.warning(f"Job {job_id} execution rejected: {result['message']}")

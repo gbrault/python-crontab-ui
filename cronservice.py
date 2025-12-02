@@ -114,9 +114,14 @@ def release_lock(job_id: int) -> None:
         lock_file.unlink()
 
 
-def run_manually(name: Name, job_id: int) -> dict:
+def run_manually(name: Name, job_id: int, db_command: str) -> dict:
     """
     Lance un job manuellement en arrière-plan de manière non-bloquante.
+    
+    Args:
+        name: Nom du job
+        job_id: ID du job
+        db_command: Commande originale depuis la DB (sans wrapper cron)
     
     Returns:
         dict: Informations sur le lancement (success, message, pid)
@@ -132,10 +137,9 @@ def run_manually(name: Name, job_id: int) -> dict:
         }
     
     try:
-        # Récupérer la commande du job
-        match = _cron.find_comment(name)
-        job = list(match)[0]
-        command = job.command
+        # Utiliser la commande originale (DB) avec logging, pas celle du crontab (qui a le wrapper)
+        from utils import add_log_file
+        command = add_log_file(db_command, name, job_id=None)  # Sans wrapper cron
         
         logger.info(f"Launching job {job_id} ({name}) in background")
         logger.debug(f"Command to execute: {command}")
