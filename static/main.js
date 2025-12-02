@@ -15,54 +15,48 @@ $(document).ready(function () {
     }
   });
 
-  $(".ui.grey.basic.button").click(function () {
+  $(".ui.grey.basic.button").click(function (e) {
+    e.preventDefault(); // Empêcher tout comportement par défaut
     const id = $(this).val();
     console.log(`Attempting to run job ${id}`);
     console.log(`URL: ${window.location.origin}/run_job/${id}/`);
 
-    $.ajax({
-      url: `/run_job/${id}/`,
-      type: "GET",
-      dataType: "json",
-      timeout: 10000,
-      success: function (response) {
-        console.log("Success response:", response);
-        if (response.success) {
-          alert(`✅ ${response.message}`);
-        } else {
-          alert(`❌ ${response.message}`);
-        }
+    // Utiliser fetch au lieu de $.ajax pour meilleure compatibilité Firefox
+    fetch(`/run_job/${id}/`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
       },
-      error: function (xhr, status, error) {
-        console.log("Error details:", {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          responseText: xhr.responseText,
-          responseJSON: xhr.responseJSON,
-          error: error,
-          ajaxStatus: status,
+      cache: "no-cache",
+    })
+      .then((response) => {
+        console.log("Response status:", response.status);
+        console.log("Response headers:", response.headers);
+        
+        // Lire le JSON même en cas d'erreur
+        return response.json().then((data) => {
+          return { status: response.status, data: data, ok: response.ok };
         });
-
-        if (xhr.status === 409) {
-          // Job already running
-          const errorMsg = xhr.responseJSON?.detail || "Job is already running";
-          alert(`⚠️ ${errorMsg}`);
-        } else if (xhr.status === 404) {
+      })
+      .then(({ status, data, ok }) => {
+        console.log("Parsed response:", { status, data, ok });
+        
+        if (ok && data.success) {
+          alert(`✅ ${data.message}`);
+        } else if (status === 409) {
+          alert(`⚠️ ${data.detail || "Job already running"}`);
+        } else if (status === 404) {
           alert(`❌ Job non trouvé`);
-        } else if (xhr.status === 500) {
-          const errorMsg = xhr.responseJSON?.detail || "Erreur serveur interne";
-          alert(`❌ Erreur serveur: ${errorMsg}`);
-        } else if (xhr.status === 0) {
-          alert(
-            `❌ Erreur réseau: Impossible de contacter le serveur. Vérifiez que l'application est démarrée.`
-          );
+        } else if (status === 500) {
+          alert(`❌ Erreur serveur: ${data.detail || "Erreur interne"}`);
         } else {
-          alert(
-            `❌ Une erreur est survenue lors du lancement du job (${xhr.status})`
-          );
+          alert(`❌ ${data.message || data.detail || "Erreur inconnue"}`);
         }
-      },
-    });
+      })
+      .catch((error) => {
+        console.error("Fetch error:", error);
+        alert(`❌ Erreur réseau: ${error.message}`);
+      });
   });
 
   $("#save").click(function () {
