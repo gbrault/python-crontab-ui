@@ -140,21 +140,13 @@ trap 'rm -f "$LOCK_FILE"' EXIT
         os.chmod(wrapper_path, 0o755)
         
         # Lancer le processus en arrière-plan détaché
-        # Utiliser preexec_fn seulement sur Unix/Linux
-        popen_kwargs = {
-            'stdout': subprocess.DEVNULL,
-            'stderr': subprocess.DEVNULL,
-            'stdin': subprocess.DEVNULL,
-            'start_new_session': True,
-        }
-        
-        # preexec_fn n'est disponible que sur Unix
-        if sys.platform != 'win32':
-            popen_kwargs['preexec_fn'] = os.setpgrp
-        
+        # start_new_session=True suffit pour détacher complètement le processus
         process = subprocess.Popen(
             ['/bin/bash', wrapper_path],
-            **popen_kwargs
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
         )
         
         pid = process.pid
