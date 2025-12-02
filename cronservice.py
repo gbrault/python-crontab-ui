@@ -48,3 +48,22 @@ def get_next_schedule(name: Name) -> str:
         return schedule.get_next().strftime("%d/%m/%Y %H:%M:%S").replace("/", "-")
     except IndexError:
         return None
+
+
+def sync_job_to_cron(comm: Command, name: Name, sched: Schedule) -> None:
+    """Synchronise un job de la DB vers le crontab système"""
+    # Vérifier si le job existe déjà dans le crontab
+    existing_jobs = list(_cron.find_comment(name))
+    
+    if existing_jobs:
+        # Mettre à jour le job existant
+        job = existing_jobs[0]
+        job.setall(sched)
+        job.set_command(add_log_file(comm, name))
+    else:
+        # Créer un nouveau job
+        if croniter.is_valid(sched):
+            job = _cron.new(command=add_log_file(comm, name), comment=name)
+            job.setall(sched)
+    
+    _cron.write()

@@ -2,12 +2,17 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+import logging
 
 import models
 import cronservice
 from models import Job
 from utils import watch_status, load_logs
 from database import SessionLocal, engine, JobRequest
+
+# Configuration du logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -20,6 +25,36 @@ def get_db():
     try:
         db = SessionLocal()
         yield db
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Synchronise la base de données avec le crontab système au démarrage"""
+    logger.info("🚀 Application démarrée - Synchronisation des jobs cron...")
+    
+    db = SessionLocal()
+    try:
+        # Récupérer tous les jobs de la base de données
+        jobs = db.query(Job).all()
+        
+        if jobs:
+            logger.info(f"📋 Synchronisation de {len(jobs)} job(s) avec le crontab système...")
+            
+            for job in jobs:
+                try:
+                    cronservice.sync_job_to_cron(job.command, job.name, job.schedule)
+                    logger.info(f"  ✅ Job '{job.name}' synchronisé")
+                except Exception as e:
+                    logger.error(f"  ❌ Erreur lors de la synchronisation du job '{job.name}': {e}")
+            
+            logger.info("✅ Synchronisation terminée avec succès")
+        else:
+            logger.info("ℹ️  Aucun job à synchroniser")
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la synchronisation au démarrage: {e}")
     finally:
         db.close()
 
