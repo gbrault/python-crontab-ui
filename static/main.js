@@ -1,128 +1,155 @@
-$(document).ready(function () {
-  $("#add_job").click(function () {
-    $(".ui.modal").modal("show");
+// JavaScript vanilla moderne - pas de jQuery nécessaire
+document.addEventListener("DOMContentLoaded", function () {
+  // Bouton "Add Job" - ouvre le modal
+  const addJobBtn = document.getElementById("add_job");
+  if (addJobBtn) {
+    addJobBtn.addEventListener("click", function () {
+      const modal = document.querySelector(".ui.modal");
+      if (modal) {
+        modal.classList.add("visible", "active");
+        document.body.classList.add("dimmable", "dimmed");
+      }
+    });
+  }
+
+  // Boutons "Delete" (rouge)
+  document.querySelectorAll(".ui.inverted.red.button").forEach((button) => {
+    button.addEventListener("click", function () {
+      if (confirm("Are you sure you want delete this job?")) {
+        const id = this.value;
+        fetch(`job/${id}/`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        })
+          .then(() => alert("Job Deleted!. Please Reload"))
+          .catch((error) => alert(`Error: ${error.message}`));
+      }
+    });
   });
 
-  $(".ui.inverted.red.button").click(function () {
-    if (confirm("Are you sure you want delete this job?")) {
-      const id = $(this).val();
-      $.ajax({
-        url: `job/${id}/`,
-        type: "DELETE",
-        contentType: "application/json",
-      });
-      alert("Job Deleted!. Please Reload");
-    }
-  });
+  // Boutons "Run Now" (gris)
+  document.querySelectorAll(".ui.grey.basic.button").forEach((button) => {
+    button.addEventListener("click", function (e) {
+      e.preventDefault();
+      const id = this.value;
+      console.log(`Attempting to run job ${id}`);
+      console.log(`URL: ${window.location.origin}/run_job/${id}/`);
 
-  $(".ui.grey.basic.button").click(function (e) {
-    e.preventDefault(); // Empêcher tout comportement par défaut
-    const id = $(this).val();
-    console.log(`Attempting to run job ${id}`);
-    console.log(`URL: ${window.location.origin}/run_job/${id}/`);
+      fetch(`/run_job/${id}/`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-cache",
+      })
+        .then((response) => {
+          console.log("Response status:", response.status);
+          return response.json().then((data) => ({
+            status: response.status,
+            data: data,
+            ok: response.ok,
+          }));
+        })
+        .then(({ status, data, ok }) => {
+          console.log("Parsed response:", { status, data, ok });
 
-    // Utiliser fetch au lieu de $.ajax pour meilleure compatibilité Firefox
-    fetch(`/run_job/${id}/`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-cache",
-    })
-      .then((response) => {
-        console.log("Response status:", response.status);
-        console.log("Response headers:", response.headers);
-
-        // Lire le JSON même en cas d'erreur
-        return response.json().then((data) => {
-          return { status: response.status, data: data, ok: response.ok };
+          if (ok && data.success) {
+            alert(`✅ ${data.message}`);
+          } else if (status === 409) {
+            alert(`⚠️ ${data.detail || "Job already running"}`);
+          } else if (status === 404) {
+            alert(`❌ Job non trouvé`);
+          } else if (status === 500) {
+            alert(`❌ Erreur serveur: ${data.detail || "Erreur interne"}`);
+          } else {
+            alert(`❌ ${data.message || data.detail || "Erreur inconnue"}`);
+          }
+        })
+        .catch((error) => {
+          console.error("Fetch error:", error);
+          alert(`❌ Erreur réseau: ${error.message}`);
         });
-      })
-      .then(({ status, data, ok }) => {
-        console.log("Parsed response:", { status, data, ok });
-
-        if (ok && data.success) {
-          alert(`✅ ${data.message}`);
-        } else if (status === 409) {
-          alert(`⚠️ ${data.detail || "Job already running"}`);
-        } else if (status === 404) {
-          alert(`❌ Job non trouvé`);
-        } else if (status === 500) {
-          alert(`❌ Erreur serveur: ${data.detail || "Erreur interne"}`);
-        } else {
-          alert(`❌ ${data.message || data.detail || "Erreur inconnue"}`);
-        }
-      })
-      .catch((error) => {
-        console.error("Fetch error:", error);
-        alert(`❌ Erreur réseau: ${error.message}`);
-      });
+    });
   });
 
-  $("#save").click(function () {
-    const command = $("#command").val();
-    const command_name = $("#command_name").val();
-    const schedule = $("#schedule").val();
+  // Bouton "Save" - créer un job
+  const saveBtn = document.getElementById("save");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", function () {
+      const command = document.getElementById("command").value;
+      const command_name = document.getElementById("command_name").value;
+      const schedule = document.getElementById("schedule").value;
 
-    if (command === "" || command_name === "" || schedule === "") {
-      alert("You must fill out all fields");
-    } else {
-      $.ajax({
-        url: "/create_job/",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({
-          command: command,
-          name: command_name,
-          schedule: schedule,
-        }),
-        statusCode: {
-          404: function () {
-            // No content found (404)
-            // This code will be executed if the server returns a 404 response
-            alert("Make sure the cron expression is valid.");
-          },
-        },
-        dataType: "json",
-      });
-    }
+      if (command === "" || command_name === "" || schedule === "") {
+        alert("You must fill out all fields");
+      } else {
+        fetch("/create_job/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            command: command,
+            name: command_name,
+            schedule: schedule,
+          }),
+        })
+          .then((response) => {
+            if (response.status === 404) {
+              alert("Make sure the cron expression is valid.");
+            }
+            return response.json();
+          })
+          .then(() => {
+            // Fermer le modal
+            const modal = document.querySelector(".ui.modal");
+            if (modal) {
+              modal.classList.remove("visible", "active");
+              document.body.classList.remove("dimmable", "dimmed");
+            }
+            location.reload(); // Recharger pour voir le nouveau job
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+    });
+  }
 
-    $(".ui.modal").modal("hide");
-  });
+  // Bouton "Update" - mettre à jour un job
+  const updateBtn = document.getElementById("update");
+  if (updateBtn) {
+    updateBtn.addEventListener("click", function () {
+      const id = this.value;
+      const command = document.getElementById("command").value;
+      const command_name = document.getElementById("command_name").value;
+      const schedule = document.getElementById("schedule").value;
 
-  $("#update").click(function () {
-    const id = $(this).val();
-    const command = $("#command").val();
-    const command_name = $("#command_name").val();
-    const schedule = $("#schedule").val();
+      if (command === "" || command_name === "" || schedule === "") {
+        alert("You must fill out all fields");
+      } else {
+        fetch(`/update_job/${id}/`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            command: command,
+            name: command_name,
+            schedule: schedule,
+          }),
+        })
+          .then((response) => {
+            if (response.status === 500) {
+              alert("Make sure the cron expression is valid.");
+            }
+            return response.json();
+          })
+          .then(() => location.reload())
+          .catch((error) => console.error("Error:", error));
+      }
+    });
+  }
 
-    if (command === "" || command_name === "" || schedule === "") {
-      alert("You must fill out all fields");
-    } else {
-      $.ajax({
-        url: `/update_job/${id}/`,
-        type: "PUT",
-        contentType: "application/json",
-        data: JSON.stringify({
-          command: command,
-          name: command_name,
-          schedule: schedule,
-        }),
-        statusCode: {
-          500: function () {
-            // No content found (404)
-            // This code will be executed if the server returns a 404 response
-            alert("Make sure the cron expression is valid.");
-          },
-        },
-        dataType: "json",
-      });
-    }
-  });
-
-  $(".custom.button").popup({
-    popup: $(".custom.popup"),
-    on: "click",
-    inline: true,
+  // Popups pour les custom buttons (si nécessaire)
+  document.querySelectorAll(".custom.button").forEach((button) => {
+    button.addEventListener("click", function () {
+      const popup = this.nextElementSibling;
+      if (popup && popup.classList.contains("custom.popup")) {
+        popup.classList.toggle("visible");
+      }
+    });
   });
 });
