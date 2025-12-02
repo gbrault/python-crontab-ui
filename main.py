@@ -48,11 +48,9 @@ async def get_jobs(job_id: int, request: Request, db: Session = Depends(get_db))
 
 @app.get("/logs/{job_id}")
 async def get_logs(job_id: int, request: Request, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id)
-    update_log = {"log": load_logs(job.first().name)}
-    job.update(update_log)
-    db.commit()
-    output = {"request": request, "job": update_log}
+    job = db.query(Job).filter(Job.id == job_id).first()
+    log_content = load_logs(job.name)
+    output = {"request": request, "job": {"log": log_content}}
     return templates.TemplateResponse("logs.html", output)
 
 
