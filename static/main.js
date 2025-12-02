@@ -143,14 +143,49 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Popups pour les custom buttons (si nécessaire)
+  // Popups "Show Command" - toggle visibility
   document.querySelectorAll(".custom.button").forEach((button) => {
-    button.addEventListener("click", function () {
+    button.addEventListener("click", function (e) {
+      e.stopPropagation();
+
+      // Trouver le popup qui suit directement ce bouton
       const popup = this.nextElementSibling;
-      if (popup && popup.classList.contains("custom.popup")) {
+
+      if (
+        popup &&
+        popup.classList.contains("custom") &&
+        popup.classList.contains("popup")
+      ) {
+        // Fermer tous les autres popups
+        document.querySelectorAll(".custom.popup.visible").forEach((p) => {
+          if (p !== popup) {
+            p.classList.remove("visible");
+          }
+        });
+
+        // Toggle ce popup
         popup.classList.toggle("visible");
+
+        // Positionner le popup
+        const rect = this.getBoundingClientRect();
+        popup.style.position = "absolute";
+        popup.style.top = rect.bottom + 5 + "px";
+        popup.style.left = rect.left + "px";
+        popup.style.zIndex = "1000";
       }
     });
+  });
+
+  // Fermer les popups si on clique ailleurs
+  document.addEventListener("click", function (e) {
+    if (
+      !e.target.classList.contains("custom") ||
+      !e.target.classList.contains("button")
+    ) {
+      document.querySelectorAll(".custom.popup.visible").forEach((popup) => {
+        popup.classList.remove("visible");
+      });
+    }
   });
 
   // Bouton "Clear Logs" - efface les logs
