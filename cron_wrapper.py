@@ -73,8 +73,10 @@ def main():
     # Exécuter la commande
     exit_code = 0
     try:
-        result = subprocess.run(command, shell=True, executable='/bin/bash')
-        exit_code = result.returncode
+        #result = subprocess.run(command, shell=True, executable='/bin/bash')
+        #exit_code = result.returncode
+        exit_code = os.system(command)
+        sys.exit(exit_code >> 8)  # os.system() retourne le wait() status        
         log_message(f"Job {job_id} completed with exit code {exit_code}")
     except Exception as e:
         log_message(f"Error executing job {job_id}: {e}")
