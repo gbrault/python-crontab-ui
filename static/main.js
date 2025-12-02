@@ -23,6 +23,7 @@ $(document).ready(function () {
       type: "GET",
       contentType: "application/json",
       success: function (response) {
+        console.log("Success response:", response);
         if (response.success) {
           alert(`✅ ${response.message}`);
         } else {
@@ -30,6 +31,7 @@ $(document).ready(function () {
         }
       },
       error: function (xhr) {
+        console.log("Error response:", xhr.status, xhr.responseJSON);
         if (xhr.status === 409) {
           // Job already running
           const errorMsg = xhr.responseJSON?.detail || "Job is already running";

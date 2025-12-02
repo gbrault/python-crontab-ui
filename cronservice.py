@@ -4,10 +4,14 @@ from datetime import datetime
 import getpass
 import subprocess
 import os
+import sys
 import psutil
 from pathlib import Path
+import logging
 
 from utils import add_log_file, Command, Name, Schedule, delete_log_file
+
+logger = logging.getLogger(__name__)
 
 _user = getpass.getuser()
 
@@ -104,6 +108,7 @@ def run_manually(name: Name, job_id: int) -> dict:
     # Vérifier si le job est déjà en cours d'exécution
     is_running, existing_pid = is_job_running(job_id)
     if is_running:
+        logger.warning(f"Job {job_id} ({name}) already running with PID {existing_pid}")
         return {
             "success": False,
             "message": f"Job already running with PID {existing_pid}",
@@ -115,6 +120,8 @@ def run_manually(name: Name, job_id: int) -> dict:
         match = _cron.find_comment(name)
         job = list(match)[0]
         command = job.command
+        
+        logger.info(f"Launching job {job_id} ({name}) in background")
         
         # Lancer le job en arrière-plan avec un wrapper pour gérer le lock
         wrapper_script = f"""#!/bin/bash
@@ -133,16 +140,25 @@ trap 'rm -f "$LOCK_FILE"' EXIT
         os.chmod(wrapper_path, 0o755)
         
         # Lancer le processus en arrière-plan détaché
+        # Utiliser preexec_fn seulement sur Unix/Linux
+        popen_kwargs = {
+            'stdout': subprocess.DEVNULL,
+            'stderr': subprocess.DEVNULL,
+            'stdin': subprocess.DEVNULL,
+            'start_new_session': True,
+        }
+        
+        # preexec_fn n'est disponible que sur Unix
+        if sys.platform != 'win32':
+            popen_kwargs['preexec_fn'] = os.setpgrp
+        
         process = subprocess.Popen(
             ['/bin/bash', wrapper_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True,  # Détache complètement le processus
-            preexec_fn=os.setpgrp  # Crée un nouveau groupe de processus
+            **popen_kwargs
         )
         
         pid = process.pid
+        logger.info(f"Job {job_id} ({name}) launched successfully with PID {pid}")
         
         return {
             "success": True,
@@ -151,12 +167,14 @@ trap 'rm -f "$LOCK_FILE"' EXIT
         }
         
     except IndexError:
+        logger.error(f"Job {job_id} ({name}) not found in crontab")
         return {
             "success": False,
             "message": "Job not found in crontab",
             "pid": None
         }
     except Exception as e:
+        logger.error(f"Error launching job {job_id} ({name}): {str(e)}", exc_info=True)
         return {
             "success": False,
             "message": f"Error launching job: {str(e)}",
