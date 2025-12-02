@@ -7,7 +7,7 @@ Schedule = str
 
 def add_log_file(command: Command, name: Name) -> str:
     log_file_name = name.replace(" ", "")
-    return f"{{ {command} || echo Failed; }} 2>&1 | ts >> logs/{log_file_name}.log"
+    return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> logs/{log_file_name}.log"
 
 
 def delete_log_file(name: Name) -> None:
