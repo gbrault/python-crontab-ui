@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import logging
 
@@ -155,11 +156,21 @@ async def run_job(job_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=409, detail=result["message"])
         
         logger.info(f"Job {job_id} launched successfully with PID {result['pid']}")
-        return {
-            "success": True,
-            "message": result["message"],
-            "pid": result["pid"]
-        }
+        
+        # Retourner une JSONResponse explicite pour Firefox
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": result["message"],
+                "pid": result["pid"]
+            },
+            status_code=200,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     except HTTPException:
         raise
     except Exception as e:
