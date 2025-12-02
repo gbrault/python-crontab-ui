@@ -18,12 +18,13 @@ $(document).ready(function () {
   $(".ui.grey.basic.button").click(function () {
     const id = $(this).val();
     console.log(`Attempting to run job ${id}`);
+    console.log(`URL: ${window.location.origin}/run_job/${id}/`);
 
     $.ajax({
       url: `/run_job/${id}/`,
       type: "GET",
-      contentType: "application/json",
       dataType: "json",
+      timeout: 10000,
       success: function (response) {
         console.log("Success response:", response);
         if (response.success) {
