@@ -17,11 +17,13 @@ $(document).ready(function () {
 
   $(".ui.grey.basic.button").click(function () {
     const id = $(this).val();
+    console.log(`Attempting to run job ${id}`);
 
     $.ajax({
       url: `/run_job/${id}/`,
       type: "GET",
       contentType: "application/json",
+      dataType: "json",
       success: function (response) {
         console.log("Success response:", response);
         if (response.success) {
@@ -30,14 +32,33 @@ $(document).ready(function () {
           alert(`❌ ${response.message}`);
         }
       },
-      error: function (xhr) {
-        console.log("Error response:", xhr.status, xhr.responseJSON);
+      error: function (xhr, status, error) {
+        console.log("Error details:", {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          responseText: xhr.responseText,
+          responseJSON: xhr.responseJSON,
+          error: error,
+          ajaxStatus: status,
+        });
+
         if (xhr.status === 409) {
           // Job already running
           const errorMsg = xhr.responseJSON?.detail || "Job is already running";
           alert(`⚠️ ${errorMsg}`);
+        } else if (xhr.status === 404) {
+          alert(`❌ Job non trouvé`);
+        } else if (xhr.status === 500) {
+          const errorMsg = xhr.responseJSON?.detail || "Erreur serveur interne";
+          alert(`❌ Erreur serveur: ${errorMsg}`);
+        } else if (xhr.status === 0) {
+          alert(
+            `❌ Erreur réseau: Impossible de contacter le serveur. Vérifiez que l'application est démarrée.`
+          );
         } else {
-          alert("❌ Une erreur est survenue lors du lancement du job");
+          alert(
+            `❌ Une erreur est survenue lors du lancement du job (${xhr.status})`
+          );
         }
       },
     });

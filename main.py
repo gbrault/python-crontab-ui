@@ -128,21 +128,33 @@ async def run_job(job_id: int, db: Session = Depends(get_db)):
     Lance un job manuellement en arrière-plan.
     Retourne immédiatement avec le statut du lancement.
     """
-    chosen_job = db.query(Job).filter(Job.id == job_id).first()
-    
-    if not chosen_job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    
-    result = cronservice.run_manually(chosen_job.name, job_id)
-    
-    if not result["success"]:
-        raise HTTPException(status_code=409, detail=result["message"])
-    
-    return {
-        "success": True,
-        "message": result["message"],
-        "pid": result["pid"]
-    }
+    try:
+        logger.info(f"Received request to run job {job_id}")
+        
+        chosen_job = db.query(Job).filter(Job.id == job_id).first()
+        
+        if not chosen_job:
+            logger.warning(f"Job {job_id} not found in database")
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        logger.info(f"Running job {job_id}: {chosen_job.name}")
+        result = cronservice.run_manually(chosen_job.name, job_id)
+        
+        if not result["success"]:
+            logger.warning(f"Job {job_id} execution rejected: {result['message']}")
+            raise HTTPException(status_code=409, detail=result["message"])
+        
+        logger.info(f"Job {job_id} launched successfully with PID {result['pid']}")
+        return {
+            "success": True,
+            "message": result["message"],
+            "pid": result["pid"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in run_job endpoint for job {job_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.delete("/job/{job_id}/")
