@@ -1,6 +1,6 @@
 from crontab import CronTab
 from croniter import croniter
-from datetime import datetime
+from datetime import datetime, timedelta
 import getpass
 import subprocess
 import os
@@ -8,6 +8,7 @@ import sys
 import psutil
 from pathlib import Path
 import logging
+import shlex
 
 from utils import add_log_file, Command, Name, Schedule, delete_log_file
 
@@ -144,7 +145,7 @@ with open(lock_file, 'w') as f:
 try:
     # Exécuter la commande via shell
     result = subprocess.run(
-        {repr(command)},
+        {shlex.quote(command)},
         shell=True,
         capture_output=False
     )
