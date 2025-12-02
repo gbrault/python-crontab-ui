@@ -57,40 +57,40 @@ def is_job_running(job_id: int) -> tuple[bool, int | None]:
     """
     lock_file = get_lock_file_path(job_id)
     
-    logger.debug(f"Checking lock file: {lock_file}, exists: {lock_file.exists()}")
+    logger.info(f"Checking lock file: {lock_file}, exists: {lock_file.exists()}")
     
     if not lock_file.exists():
-        logger.debug(f"No lock file for job {job_id}")
+        logger.info(f"No lock file for job {job_id}")
         return False, None
     
     try:
         with open(lock_file, 'r') as f:
             pid = int(f.read().strip())
         
-        logger.debug(f"Lock file contains PID: {pid}")
+        logger.info(f"Lock file contains PID: {pid}")
         
         # Vérifier si le process existe toujours
         if psutil.pid_exists(pid):
-            logger.debug(f"PID {pid} exists in system")
+            logger.info(f"PID {pid} exists in system")
             try:
                 process = psutil.Process(pid)
                 status = process.status()
-                logger.debug(f"Process {pid} status: {status}")
+                logger.info(f"Process {pid} status: {status}")
                 # Vérifier que le process n'est pas un zombie
                 if status != psutil.STATUS_ZOMBIE:
                     logger.info(f"Job {job_id} is running with PID {pid}")
                     return True, pid
                 else:
-                    logger.debug(f"Process {pid} is zombie, cleaning lock")
+                    logger.info(f"Process {pid} is zombie, cleaning lock")
             except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                logger.debug(f"Process check failed: {e}")
+                logger.info(f"Process check failed: {e}")
                 pass
         else:
-            logger.debug(f"PID {pid} does not exist")
+            logger.info(f"PID {pid} does not exist")
         
         # Le process n'existe plus, nettoyer le lock
         lock_file.unlink()
-        logger.debug(f"Cleaned stale lock file for job {job_id}")
+        logger.info(f"Cleaned stale lock file for job {job_id}")
         return False, None
         
     except (ValueError, FileNotFoundError):
