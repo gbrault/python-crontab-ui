@@ -20,6 +20,20 @@ def delete_log_file(name: Name) -> None:
         return None
 
 
+def clear_logs(name: Name) -> None:
+    """Vide le contenu du fichier de log sans le supprimer"""
+    log_file_name = name.replace(" ", "")
+    filename = f"{os.getcwd()}/logs/{log_file_name}.log"
+    try:
+        with open(filename, 'w') as f:
+            f.write("")
+    except FileNotFoundError:
+        # Créer le fichier s'il n'existe pas
+        pathlib.Path(f"{os.getcwd()}/logs").mkdir(parents=True, exist_ok=True)
+        with open(filename, 'w') as f:
+            f.write("")
+
+
 def load_logs(name: Name) -> str:
     log_file_name = name.replace(" ", "")
     filename = f"{os.getcwd()}/logs/{log_file_name}.log"

@@ -12,8 +12,10 @@
 </div>
 <div class="ui segment">
     <h3>Output</h3>
-    <pre><code>{{ log_content }}</code></pre>
+    <pre><code id="log-output">{{ log_content }}</code></pre>
 </div>
 <a href="/" class="ui button">← Back to Jobs</a>
+<button class="ui blue button" id="refresh-logs" data-job-id="{{ job.id }}">🔄 Refresh Logs</button>
+<button class="ui red button" id="clear-logs" data-job-id="{{ job.id }}">🗑️ Clear Logs</button>
 <br><br>
 {% endblock %}

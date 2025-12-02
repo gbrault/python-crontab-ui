@@ -9,7 +9,7 @@ import logging
 import models
 import cronservice
 from models import Job
-from utils import watch_status, load_logs
+from utils import watch_status, load_logs, clear_logs
 from database import SessionLocal, engine, JobRequest
 
 # Configuration du logging
@@ -98,6 +98,60 @@ async def get_logs(job_id: int, request: Request, db: Session = Depends(get_db))
     log_content = load_logs(job.name)
     output = {"request": request, "job": job, "log_content": log_content}
     return templates.TemplateResponse("logs.html", output)
+
+
+@app.post("/clear_logs/{job_id}/")
+async def clear_job_logs(job_id: int, db: Session = Depends(get_db)):
+    """
+    Efface le contenu des logs d'un job.
+    """
+    try:
+        logger.info(f"Clearing logs for job {job_id}")
+        
+        job = db.query(Job).filter(Job.id == job_id).first()
+        
+        if not job:
+            logger.warning(f"Job {job_id} not found in database")
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        clear_logs(job.name)
+        logger.info(f"Logs cleared successfully for job {job_id}: {job.name}")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Logs cleared successfully"
+            },
+            status_code=200
+        )
+    except Exception as e:
+        logger.error(f"Error clearing logs for job {job_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/refresh_logs/{job_id}/")
+async def refresh_job_logs(job_id: int, db: Session = Depends(get_db)):
+    """
+    Récupère le contenu actuel des logs d'un job.
+    """
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        log_content = load_logs(job.name)
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "log_content": log_content
+            },
+            status_code=200
+        )
+    except Exception as e:
+        logger.error(f"Error refreshing logs for job {job_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.post("/create_job/")

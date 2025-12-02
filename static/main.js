@@ -152,4 +152,70 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
+
+  // Bouton "Clear Logs" - efface les logs
+  const clearLogsBtn = document.getElementById("clear-logs");
+  if (clearLogsBtn) {
+    clearLogsBtn.addEventListener("click", function () {
+      if (!confirm("Are you sure you want to clear all logs for this job?")) {
+        return;
+      }
+
+      const jobId = this.getAttribute("data-job-id");
+      console.log(`Clearing logs for job ${jobId}`);
+
+      fetch(`/clear_logs/${jobId}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            alert("✅ " + data.message);
+            // Vider l'affichage des logs
+            const logOutput = document.getElementById("log-output");
+            if (logOutput) {
+              logOutput.textContent = "";
+            }
+          } else {
+            alert("❌ Failed to clear logs");
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert(`❌ Error: ${error.message}`);
+        });
+    });
+  }
+
+  // Bouton "Refresh Logs" - recharge les logs
+  const refreshLogsBtn = document.getElementById("refresh-logs");
+  if (refreshLogsBtn) {
+    refreshLogsBtn.addEventListener("click", function () {
+      const jobId = this.getAttribute("data-job-id");
+      console.log(`Refreshing logs for job ${jobId}`);
+
+      fetch(`/refresh_logs/${jobId}/`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            // Mettre à jour l'affichage des logs
+            const logOutput = document.getElementById("log-output");
+            if (logOutput) {
+              logOutput.textContent = data.log_content;
+            }
+            console.log("Logs refreshed successfully");
+          } else {
+            alert("❌ Failed to refresh logs");
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert(`❌ Error: ${error.message}`);
+        });
+    });
+  }
 });
