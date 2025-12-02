@@ -122,34 +122,62 @@ def run_manually(name: Name, job_id: int) -> dict:
         command = job.command
         
         logger.info(f"Launching job {job_id} ({name}) in background")
+        logger.debug(f"Command to execute: {command}")
         
-        # Lancer le job en arrière-plan avec un wrapper pour gérer le lock
-        wrapper_script = f"""#!/bin/bash
-LOCK_FILE="/tmp/crontab_job_{job_id}.lock"
-echo $$ > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
+        # Créer un script Python wrapper qui gère le lock et l'exécution
+        wrapper_script = f"""#!/usr/bin/env python3
+import subprocess
+import sys
+import os
+import signal
 
-# Exécuter la commande
-{command}
+# Ignorer SIGHUP pour survivre à la fermeture de la session parent
+signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+lock_file = "/tmp/crontab_job_{job_id}.lock"
+pid = os.getpid()
+
+# Écrire le PID dans le fichier lock
+with open(lock_file, 'w') as f:
+    f.write(str(pid))
+
+try:
+    # Exécuter la commande via shell
+    result = subprocess.run(
+        {repr(command)},
+        shell=True,
+        capture_output=False
+    )
+    sys.exit(result.returncode)
+finally:
+    # Nettoyer le lock
+    try:
+        os.remove(lock_file)
+    except:
+        pass
 """
         
         # Créer un fichier temporaire pour le script wrapper
-        wrapper_path = f"/tmp/crontab_wrapper_{job_id}.sh"
+        wrapper_path = f"/tmp/crontab_wrapper_{job_id}.py"
         with open(wrapper_path, 'w') as f:
             f.write(wrapper_script)
         os.chmod(wrapper_path, 0o755)
         
+        logger.debug(f"Wrapper script created at {wrapper_path}")
+        
         # Lancer le processus en arrière-plan détaché
-        # start_new_session=True suffit pour détacher complètement le processus
         process = subprocess.Popen(
-            ['/bin/bash', wrapper_path],
+            [sys.executable, wrapper_path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
             start_new_session=True,
+            close_fds=True,
         )
         
         pid = process.pid
+        
+        # Ne pas attendre la fin du processus
         logger.info(f"Job {job_id} ({name}) launched successfully with PID {pid}")
         
         return {
