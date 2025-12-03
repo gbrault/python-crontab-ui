@@ -9,7 +9,7 @@ import logging
 import models
 import cronservice
 from models import Job
-from utils import watch_status, load_logs, clear_logs
+from utils import clear_logs, load_logs, get_locale_from_accept_language, watch_status
 from database import SessionLocal, engine, JobRequest
 
 # Configuration du logging
@@ -81,6 +81,15 @@ def update_displayed_schedule(db: Session = Depends(get_db)) -> None:
 async def home(request: Request, db: Session = Depends(get_db)):
     update_displayed_schedule(db)
     jobs = db.query(Job).all()
+    
+    # Extraire la locale depuis Accept-Language
+    accept_language = request.headers.get("Accept-Language", "en")
+    locale = get_locale_from_accept_language(accept_language)
+    
+    # Enrichir chaque job avec sa description cron localisée
+    for job in jobs:
+        job.cron_description = cronservice.get_cron_description(job.schedule, locale)
+    
     output = {"request": request, "jobs": jobs}
     return templates.TemplateResponse("home.html", output)
 

@@ -6,6 +6,30 @@ Name = str
 Schedule = str
 
 
+def get_locale_from_accept_language(accept_language: str) -> str:
+    """
+    Parse le header Accept-Language et retourne la locale principale.
+    
+    Args:
+        accept_language: Header HTTP Accept-Language (ex: "fr-FR,fr;q=0.9,en;q=0.8")
+    
+    Returns:
+        str: Code locale à 2 lettres (ex: "fr", "en")
+    """
+    if not accept_language:
+        return "en"
+    
+    # Prendre la première langue de la liste
+    # Format: "fr-FR,fr;q=0.9,en;q=0.8" -> "fr-FR" -> "fr"
+    try:
+        primary_lang = accept_language.split(",")[0].split("-")[0].lower()
+        # Valider que c'est une locale supportée (liste non exhaustive)
+        supported_locales = ['fr', 'en', 'es', 'de', 'it', 'pt', 'ru', 'nl', 'pl', 'ja', 'zh', 'ko']
+        return primary_lang if primary_lang in supported_locales else "en"
+    except (IndexError, AttributeError):
+        return "en"
+
+
 def add_log_file(command: Command, name: Name, job_id: int = None) -> str:
     log_file_name = name.replace(" ", "")
     # Retourner la commande avec logging, sans wrapper cron

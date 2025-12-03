@@ -34,7 +34,8 @@
                 </div>
                 <div class="ui custom popup">
                     <div style="text-align: left;">
-                        <strong>Cron Expression:</strong> {{ job.schedule }}<br><br>
+                        <strong>Cron Expression:</strong> {{ job.schedule }}<br>
+                        <strong>Description:</strong> <em>{{ job.cron_description }}</em><br><br>
                         <strong>Format:</strong> minute hour day month weekday<br>
                         <strong>Next execution:</strong> {{ job.next_run }}
                     </div>

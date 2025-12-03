@@ -9,6 +9,7 @@ import psutil
 from pathlib import Path
 import logging
 import shlex
+from cron_descriptor import get_description
 
 from utils import add_log_file, Command, Name, Schedule, delete_log_file
 
@@ -260,6 +261,42 @@ def get_next_schedule(name: Name) -> str:
         return schedule.get_next().strftime("%d/%m/%Y %H:%M:%S").replace("/", "-")
     except IndexError:
         return None
+
+
+def get_cron_description(schedule: str, locale: str = "en") -> str:
+    """
+    Génère une description lisible d'une expression cron.
+    
+    Args:
+        schedule: Expression cron (ex: "0 2 * * *")
+        locale: Code locale à 2 lettres (ex: "fr", "en")
+    
+    Returns:
+        str: Description localisée ou expression brute en cas d'erreur
+    """
+    try:
+        # cron-descriptor utilise des codes locales différents
+        # Mapper les codes standards vers ceux de cron-descriptor
+        locale_map = {
+            'fr': 'fr_FR',
+            'en': 'en_US',
+            'es': 'es_ES',
+            'de': 'de_DE',
+            'it': 'it_IT',
+            'pt': 'pt_BR',
+            'ru': 'ru_RU',
+            'nl': 'nl_NL',
+            'pl': 'pl_PL',
+            'ja': 'ja_JP',
+            'zh': 'zh_CN',
+            'ko': 'ko_KR'
+        }
+        
+        cron_locale = locale_map.get(locale, 'en_US')
+        return get_description(schedule, locale_code=cron_locale)
+    except Exception as e:
+        logger.warning(f"Failed to get cron description for '{schedule}': {e}")
+        return schedule  # Fallback sur l'expression brute
 
 
 def sync_job_to_cron(comm: Command, name: Name, sched: Schedule, job_id: int) -> None:
