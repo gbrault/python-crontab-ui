@@ -8,15 +8,8 @@ Schedule = str
 
 def add_log_file(command: Command, name: Name, job_id: int = None) -> str:
     log_file_name = name.replace(" ", "")
-    base_command = f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> {os.getcwd()}/logs/{log_file_name}.log"
-    
-    # Si job_id est fourni, utiliser le wrapper pour gérer le lock
-    if job_id is not None:
-        # Wrapper qui gère le lock et empêche les exécutions simultanées
-        return f'/usr/bin/python3 {os.getcwd()}/cron_wrapper.py {job_id} "{base_command}"'
-    else:
-        # Ancien comportement (compatibilité)
-        return base_command
+    # Retourner la commande avec logging, sans wrapper cron
+    return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> {os.getcwd()}/logs/{log_file_name}.log"
 
 
 def delete_log_file(name: Name) -> None:
