@@ -32,8 +32,15 @@ def get_locale_from_accept_language(accept_language: str) -> str:
 
 def add_log_file(command: Command, name: Name, job_id: int = None) -> str:
     log_file_name = name.replace(" ", "")
-    # Retourner la commande avec logging, sans wrapper cron
-    return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> /app/logs/{log_file_name}.log"
+    log_path = f"/app/logs/{log_file_name}.log"
+    
+    if job_id is None:
+        # Exécution manuelle : pas de vérification de lock (géré par le wrapper Python)
+        return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> {log_path}"
+    else:
+        # Exécution cron : vérification du lock avant d'exécuter
+        lock_file = f"/tmp/crontab_job_{job_id}.lock"
+        return f'if [ ! -f {lock_file} ]; then {{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> {log_path}; else echo "$(date \'+%Y-%m-%d %H:%M:%S\') Skipped: job already running (manual execution in progress)" >> {log_path}; fi'
 
 
 def delete_log_file(name: Name) -> None:
