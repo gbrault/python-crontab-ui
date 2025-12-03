@@ -9,7 +9,7 @@ import psutil
 from pathlib import Path
 import logging
 import shlex
-from cron_descriptor import get_description
+from cron_descriptor import get_description, Options
 
 from utils import add_log_file, Command, Name, Schedule, delete_log_file
 
@@ -275,25 +275,16 @@ def get_cron_description(schedule: str, locale: str = "en") -> str:
         str: Description localisée ou expression brute en cas d'erreur
     """
     try:
-        # cron-descriptor utilise des codes locales différents
-        # Mapper les codes standards vers ceux de cron-descriptor
-        locale_map = {
-            'fr': 'fr_FR',
-            'en': 'en_US',
-            'es': 'es_ES',
-            'de': 'de_DE',
-            'it': 'it_IT',
-            'pt': 'pt_BR',
-            'ru': 'ru_RU',
-            'nl': 'nl_NL',
-            'pl': 'pl_PL',
-            'ja': 'ja_JP',
-            'zh': 'zh_CN',
-            'ko': 'ko_KR'
-        }
+        # cron-descriptor 2.x utilise Options() au lieu de locale_code
+        # La locale est configurée via les Options
+        options = Options()
+        options.throw_exception_on_parse_error = False
+        options.use_24hour_time_format = True
         
-        cron_locale = locale_map.get(locale, 'en_US')
-        return get_description(schedule, locale_code=cron_locale)
+        # Note: cron-descriptor 2.x ne supporte pas facilement les locales dynamiques
+        # La locale doit être configurée globalement ou via des options spécifiques
+        # Pour l'instant, on utilise la locale par défaut (anglais)
+        return get_description(schedule, options=options)
     except Exception as e:
         logger.warning(f"Failed to get cron description for '{schedule}': {e}")
         return schedule  # Fallback sur l'expression brute

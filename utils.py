@@ -33,13 +33,13 @@ def get_locale_from_accept_language(accept_language: str) -> str:
 def add_log_file(command: Command, name: Name, job_id: int = None) -> str:
     log_file_name = name.replace(" ", "")
     # Retourner la commande avec logging, sans wrapper cron
-    return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> {os.getcwd()}/logs/{log_file_name}.log"
+    return f"{{ {command} || echo Failed; }} 2>&1 | /usr/bin/ts >> /app/logs/{log_file_name}.log"
 
 
 def delete_log_file(name: Name) -> None:
     try:
         log_file_name = name.replace(" ", "")
-        file = pathlib.Path(f"{os.getcwd()}/logs/{log_file_name}.log")
+        file = pathlib.Path(f"/app/logs/{log_file_name}.log")
         file.unlink()
     except FileNotFoundError:
         return None
@@ -48,20 +48,20 @@ def delete_log_file(name: Name) -> None:
 def clear_logs(name: Name) -> None:
     """Vide le contenu du fichier de log sans le supprimer"""
     log_file_name = name.replace(" ", "")
-    filename = f"{os.getcwd()}/logs/{log_file_name}.log"
+    filename = f"/app/logs/{log_file_name}.log"
     try:
         with open(filename, 'w') as f:
             f.write("")
     except FileNotFoundError:
         # Créer le fichier s'il n'existe pas
-        pathlib.Path(f"{os.getcwd()}/logs").mkdir(parents=True, exist_ok=True)
+        pathlib.Path("/app/logs").mkdir(parents=True, exist_ok=True)
         with open(filename, 'w') as f:
             f.write("")
 
 
 def load_logs(name: Name) -> str:
     log_file_name = name.replace(" ", "")
-    filename = f"{os.getcwd()}/logs/{log_file_name}.log"
+    filename = f"/app/logs/{log_file_name}.log"
     try:
         with open(filename) as f:
             return f.read()

@@ -4,7 +4,7 @@ backports.entry-points-selectable==1.1.0
 black==21.9b0
 cfgv==3.3.1
 click==8.0.3
-cron-descriptor==1.4.5
+cron-descriptor>=2.0.0
 croniter==1.0.15
 distlib==0.3.3
 fastapi==0.68.2
