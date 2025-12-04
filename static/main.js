@@ -67,6 +67,39 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // Fonction pour fermer le modal
+  function closeModal() {
+    const modal = document.querySelector(".ui.modal");
+    if (modal) {
+      modal.classList.remove("visible", "active");
+      document.body.classList.remove("dimmable", "dimmed");
+    }
+  }
+
+  // Bouton de fermeture (X) du modal
+  const closeIcon = document.querySelector(".ui.modal .close.icon");
+  if (closeIcon) {
+    closeIcon.addEventListener("click", closeModal);
+  }
+
+  // Fermer en cliquant en dehors du modal (sur le fond sombre)
+  document.addEventListener("click", function (e) {
+    const modal = document.querySelector(".ui.modal");
+    if (modal && modal.classList.contains("visible")) {
+      // Si le clic est sur le body.dimmed mais pas sur le modal
+      if (document.body.classList.contains("dimmed") && !modal.contains(e.target) && e.target !== addJobBtn) {
+        closeModal();
+      }
+    }
+  });
+
+  // Fermer avec la touche Escape
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      closeModal();
+    }
+  });
+
   // Boutons "Delete" (rouge)
   document.querySelectorAll(".ui.inverted.red.button").forEach((button) => {
     button.addEventListener("click", function () {
@@ -168,17 +201,18 @@ document.addEventListener("DOMContentLoaded", function () {
             return response.json();
           })
           .then(() => {
-            // Fermer le modal
-            const modal = document.querySelector(".ui.modal");
-            if (modal) {
-              modal.classList.remove("visible", "active");
-              document.body.classList.remove("dimmable", "dimmed");
-            }
+            closeModal();
             location.reload(); // Recharger pour voir le nouveau job
           })
           .catch((error) => console.error("Error:", error));
       }
     });
+  }
+
+  // Bouton "Cancel" - fermer le modal
+  const cancelBtn = document.getElementById("cancel");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", closeModal);
   }
 
   // Bouton "Update" - mettre à jour un job
