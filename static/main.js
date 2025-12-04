@@ -87,7 +87,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const modal = document.querySelector(".ui.modal");
     if (modal && modal.classList.contains("visible")) {
       // Si le clic est sur le body.dimmed mais pas sur le modal
-      if (document.body.classList.contains("dimmed") && !modal.contains(e.target) && e.target !== addJobBtn) {
+      if (
+        document.body.classList.contains("dimmed") &&
+        !modal.contains(e.target) &&
+        e.target !== addJobBtn
+      ) {
         closeModal();
       }
     }
