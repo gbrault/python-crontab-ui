@@ -55,8 +55,9 @@ async def startup_event():
             
             for job in jobs:
                 try:
-                    cronservice.sync_job_to_cron(job.command, job.name, job.schedule, job.id)
-                    logger.info(f"  ✅ Job '{job.name}' synchronisé")
+                    cronservice.sync_job_to_cron(job.command, job.name, job.schedule, job.id, job.is_active)
+                    status = "✅" if job.is_active else "⏸️ (désactivé)"
+                    logger.info(f"  {status} Job '{job.name}' synchronisé")
                 except Exception as e:
                     logger.error(f"  ❌ Erreur lors de la synchronisation du job '{job.name}': {e}")
             
@@ -261,3 +262,46 @@ async def delete_job(job_id: int, db: Session = Depends(get_db)):
     db.delete(job_update)
     db.commit()
     return {"INFO": f"Deleted {job_id} Successfully"}
+
+
+@app.post("/toggle_job/{job_id}/")
+async def toggle_job(job_id: int, db: Session = Depends(get_db)):
+    """
+    Active ou désactive un job (toggle).
+    Un job désactivé est commenté dans le crontab avec #.
+    """
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+        
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        # Toggle l'état
+        new_state = not job.is_active
+        
+        # Mettre à jour dans le crontab
+        success = cronservice.enable_cron_job(job.name, new_state)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update crontab")
+        
+        # Mettre à jour dans la base de données
+        job.is_active = new_state
+        db.commit()
+        
+        status_text = "activé" if new_state else "désactivé"
+        logger.info(f"Job {job_id} ({job.name}) {status_text}")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "is_active": new_state,
+                "message": f"Job {status_text} avec succès"
+            },
+            status_code=200
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling job {job_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

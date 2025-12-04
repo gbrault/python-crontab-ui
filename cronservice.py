@@ -290,7 +290,7 @@ def get_cron_description(schedule: str, locale: str = "en") -> str:
         return schedule  # Fallback sur l'expression brute
 
 
-def sync_job_to_cron(comm: Command, name: Name, sched: Schedule, job_id: int) -> None:
+def sync_job_to_cron(comm: Command, name: Name, sched: Schedule, job_id: int, is_active: bool = True) -> None:
     """Synchronise un job de la DB vers le crontab système"""
     # Vérifier si le job existe déjà dans le crontab
     existing_jobs = list(_cron.find_comment(name))
@@ -300,10 +300,56 @@ def sync_job_to_cron(comm: Command, name: Name, sched: Schedule, job_id: int) ->
         job = existing_jobs[0]
         job.setall(sched)
         job.set_command(add_log_file(comm, name, job_id))
+        job.enable(is_active)  # Activer ou commenter le job
     else:
         # Créer un nouveau job
         if croniter.is_valid(sched):
             job = _cron.new(command=add_log_file(comm, name, job_id), comment=name)
             job.setall(sched)
+            job.enable(is_active)  # Activer ou commenter le job
     
     _cron.write()
+
+
+def enable_cron_job(name: Name, enable: bool = True) -> bool:
+    """
+    Active ou désactive un job dans le crontab.
+    
+    Args:
+        name: Nom du job (commentaire dans le crontab)
+        enable: True pour activer, False pour désactiver (commenter avec #)
+    
+    Returns:
+        bool: True si l'opération a réussi, False sinon
+    """
+    try:
+        match = _cron.find_comment(name)
+        job = list(match)[0]
+        job.enable(enable)
+        _cron.write()
+        logger.info(f"Job '{name}' {'enabled' if enable else 'disabled'} successfully")
+        return True
+    except IndexError:
+        logger.error(f"Job '{name}' not found in crontab")
+        return False
+    except Exception as e:
+        logger.error(f"Error enabling/disabling job '{name}': {e}")
+        return False
+
+
+def is_job_enabled(name: Name) -> bool:
+    """
+    Vérifie si un job est activé dans le crontab.
+    
+    Args:
+        name: Nom du job (commentaire dans le crontab)
+    
+    Returns:
+        bool: True si le job est activé, False s'il est désactivé ou non trouvé
+    """
+    try:
+        match = _cron.find_comment(name)
+        job = list(match)[0]
+        return job.is_enabled()
+    except IndexError:
+        return False

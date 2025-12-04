@@ -13,4 +13,4 @@ class Job(Base):
     next_run = Column(String, default=None)
     status = Column(String, default=None)
     log = Column(String, default=None)
-    is_active = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)  # True = job actif, False = job commenté (#)

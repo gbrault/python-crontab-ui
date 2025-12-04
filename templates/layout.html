@@ -66,6 +66,26 @@
         .ui.custom.button {
             cursor: pointer;
         }
+
+        /* Styles pour les jobs désactivés */
+        tr.disabled-job {
+            opacity: 0.5;
+            background-color: #f9f9f9 !important;
+        }
+
+        tr.disabled-job pre,
+        tr.disabled-job code {
+            color: #999;
+        }
+
+        /* Style du toggle checkbox Semantic UI */
+        .ui.toggle.checkbox {
+            min-height: 1.5rem;
+        }
+
+        .ui.toggle.checkbox input:checked~label::before {
+            background-color: #21ba45 !important;
+        }
     </style>
 </head>
 

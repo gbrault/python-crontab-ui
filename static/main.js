@@ -1,5 +1,60 @@
 // JavaScript vanilla moderne - pas de jQuery nécessaire
 document.addEventListener("DOMContentLoaded", function () {
+  // Toggle pour activer/désactiver les jobs
+  document.querySelectorAll(".job-toggle").forEach((toggle) => {
+    toggle.addEventListener("change", function () {
+      const jobId = this.getAttribute("data-job-id");
+      const isChecked = this.checked;
+      const row = this.closest("tr");
+      const runButton = row.querySelector(".ui.grey.basic.button");
+
+      console.log(
+        `Toggling job ${jobId} to ${isChecked ? "active" : "inactive"}`
+      );
+
+      fetch(`/toggle_job/${jobId}/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.success) {
+            console.log(`Job ${jobId} toggled successfully:`, data);
+
+            // Mettre à jour l'apparence de la ligne
+            if (data.is_active) {
+              row.classList.remove("disabled-job");
+              if (runButton) runButton.disabled = false;
+            } else {
+              row.classList.add("disabled-job");
+              if (runButton) runButton.disabled = true;
+            }
+
+            // Recharger pour mettre à jour le "Next Run"
+            setTimeout(() => location.reload(), 500);
+          } else {
+            alert(`❌ ${data.message || "Erreur inconnue"}`);
+            // Remettre le toggle à son état précédent
+            toggle.checked = !isChecked;
+          }
+        })
+        .catch((error) => {
+          console.error("Error toggling job:", error);
+          alert(`❌ Erreur: ${error.message}`);
+          // Remettre le toggle à son état précédent
+          toggle.checked = !isChecked;
+        });
+    });
+  });
+
   // Bouton "Add Job" - ouvre le modal
   const addJobBtn = document.getElementById("add_job");
   if (addJobBtn) {
