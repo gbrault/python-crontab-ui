@@ -104,23 +104,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Boutons "Delete" (rouge)
-  document.querySelectorAll(".ui.inverted.red.button").forEach((button) => {
+  // Boutons "Delete" (poubelle)
+  document.querySelectorAll(".delete-btn").forEach((button) => {
     button.addEventListener("click", function () {
-      if (confirm("Are you sure you want delete this job?")) {
+      if (confirm("Êtes-vous sûr de vouloir supprimer ce job ?")) {
         const id = this.value;
         fetch(`job/${id}/`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
         })
-          .then(() => alert("Job Deleted!. Please Reload"))
-          .catch((error) => alert(`Error: ${error.message}`));
+          .then(() => {
+            alert("✅ Job supprimé !");
+            location.reload();
+          })
+          .catch((error) => alert(`❌ Erreur: ${error.message}`));
       }
     });
   });
 
-  // Boutons "Run Now" (gris)
-  document.querySelectorAll(".ui.grey.basic.button").forEach((button) => {
+  // Boutons "Run Now" (play)
+  document.querySelectorAll(".run-btn").forEach((button) => {
     button.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();

@@ -86,6 +86,32 @@
         .ui.toggle.checkbox input:checked~label::before {
             background-color: #21ba45 !important;
         }
+
+        /* Styles pour les boutons d'action */
+        .action-buttons {
+            white-space: nowrap;
+        }
+
+        .action-buttons .ui.button,
+        td .ui.icon.button {
+            margin: 2px !important;
+            padding: 8px 10px !important;
+        }
+
+        .ui.icon.button:hover {
+            transform: scale(1.1);
+            transition: transform 0.1s ease;
+        }
+
+        .ui.icon.button[disabled] {
+            opacity: 0.3 !important;
+            cursor: not-allowed;
+        }
+
+        /* Tooltips natifs améliorés */
+        [title] {
+            position: relative;
+        }
     </style>
 </head>
 

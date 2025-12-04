@@ -55,20 +55,25 @@
             <td>
                 <pre><code class="bash">{{ job.status }}</code></pre>
             </td>
-            <td>
-                <button type="button" class="ui grey basic button" value={{ job.id }} {{ 'disabled' if not job.is_active
-                    else '' }}><i class="play icon"></i>
+            <td class="action-buttons">
+                <button type="button" class="ui icon button green basic run-btn" value="{{ job.id }}" {{ 'disabled' if
+                    not job.is_active else '' }} title="Exécuter maintenant">
+                    <i class="play icon"></i>
                 </button>
-                <a href="/jobs/{{ job.id }}" class="btn btn-primary">
-                    <button type="button" class="ui inverted primary button">Update
+                <a href="/jobs/{{ job.id }}">
+                    <button type="button" class="ui icon button blue basic" title="Modifier le job">
+                        <i class="edit icon"></i>
                     </button>
                 </a>
-                <button id="delete" type="button" class="ui inverted red button" value={{ job.id }}>Delete
+                <button type="button" class="ui icon button red basic delete-btn" value="{{ job.id }}"
+                    title="Supprimer le job">
+                    <i class="trash icon"></i>
                 </button>
             </td>
             <td>
-                <a href="/logs/{{ job.id }}" class="btn btn-primary">
-                    <button type="button" class="ui blue button">Logs
+                <a href="/logs/{{ job.id }}">
+                    <button type="button" class="ui icon button teal basic" title="Voir les logs">
+                        <i class="file alternate outline icon"></i>
                     </button>
                 </a>
             </td>
