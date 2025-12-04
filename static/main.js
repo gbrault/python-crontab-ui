@@ -41,14 +41,14 @@ document.addEventListener("DOMContentLoaded", function () {
             // Recharger pour mettre à jour le "Next Run"
             setTimeout(() => location.reload(), 500);
           } else {
-            alert(`❌ ${data.message || "Erreur inconnue"}`);
+            alert(`❌ ${data.message || "Unknown error"}`);
             // Remettre le toggle à son état précédent
             toggle.checked = !isChecked;
           }
         })
         .catch((error) => {
           console.error("Error toggling job:", error);
-          alert(`❌ Erreur: ${error.message}`);
+          alert(`❌ Error: ${error.message}`);
           // Remettre le toggle à son état précédent
           toggle.checked = !isChecked;
         });
@@ -107,17 +107,17 @@ document.addEventListener("DOMContentLoaded", function () {
   // Boutons "Delete" (poubelle)
   document.querySelectorAll(".delete-btn").forEach((button) => {
     button.addEventListener("click", function () {
-      if (confirm("Êtes-vous sûr de vouloir supprimer ce job ?")) {
+      if (confirm("Are you sure you want to delete this job?")) {
         const id = this.value;
         fetch(`job/${id}/`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
         })
           .then(() => {
-            alert("✅ Job supprimé !");
+            alert("✅ Job deleted!");
             location.reload();
           })
-          .catch((error) => alert(`❌ Erreur: ${error.message}`));
+          .catch((error) => alert(`❌ Error: ${error.message}`));
       }
     });
   });
@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!id) {
         console.error("No job ID found");
-        alert("❌ Erreur: ID du job non trouvé");
+        alert("❌ Error: Job ID not found");
         return;
       }
 
@@ -165,17 +165,17 @@ document.addEventListener("DOMContentLoaded", function () {
           } else if (status === 409) {
             alert(`⚠️ ${data.detail || "Job already running"}`);
           } else if (status === 404) {
-            alert(`❌ Job non trouvé`);
+            alert(`❌ Job not found`);
           } else if (status === 500) {
-            alert(`❌ Erreur serveur: ${data.detail || "Erreur interne"}`);
+            alert(`❌ Server error: ${data.detail || "Internal error"}`);
           } else {
-            alert(`❌ ${data.message || data.detail || "Erreur inconnue"}`);
+            alert(`❌ ${data.message || data.detail || "Unknown error"}`);
           }
         })
         .catch((error) => {
           console.error("Fetch error:", error);
           alert(
-            `❌ Erreur réseau: ${error.message}\n\nVérifiez la console (F12) pour plus de détails.`
+            `❌ Network error: ${error.message}\n\nCheck the console (F12) for more details.`
           );
         });
     });

@@ -267,8 +267,8 @@ async def delete_job(job_id: int, db: Session = Depends(get_db)):
 @app.post("/toggle_job/{job_id}/")
 async def toggle_job(job_id: int, db: Session = Depends(get_db)):
     """
-    Active ou désactive un job (toggle).
-    Un job désactivé est commenté dans le crontab avec #.
+    Enable or disable a job (toggle).
+    A disabled job is commented in the crontab with #.
     """
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -276,27 +276,27 @@ async def toggle_job(job_id: int, db: Session = Depends(get_db)):
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
         
-        # Toggle l'état
+        # Toggle the state
         new_state = not job.is_active
         
-        # Mettre à jour dans le crontab
+        # Update in crontab
         success = cronservice.enable_cron_job(job.name, new_state)
         
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update crontab")
         
-        # Mettre à jour dans la base de données
+        # Update in database
         job.is_active = new_state
         db.commit()
         
-        status_text = "activé" if new_state else "désactivé"
+        status_text = "enabled" if new_state else "disabled"
         logger.info(f"Job {job_id} ({job.name}) {status_text}")
         
         return JSONResponse(
             content={
                 "success": True,
                 "is_active": new_state,
-                "message": f"Job {status_text} avec succès"
+                "message": f"Job {status_text} successfully"
             },
             status_code=200
         )

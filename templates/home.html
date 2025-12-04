@@ -50,29 +50,29 @@
                 </div>
             </td>
             <td>
-                <pre><code class="bash">{{ job.is_active and job.next_run or '(désactivé)' }}</code></pre>
+                <pre><code class="bash">{{ job.is_active and job.next_run or '(disabled)' }}</code></pre>
             </td>
             <td>
                 <pre><code class="bash">{{ job.status }}</code></pre>
             </td>
             <td class="action-buttons">
                 <button type="button" class="ui icon button green basic run-btn" value="{{ job.id }}" {{ 'disabled' if
-                    not job.is_active else '' }} title="Exécuter maintenant">
+                    not job.is_active else '' }} title="Run now">
                     <i class="play icon"></i>
                 </button>
                 <a href="/jobs/{{ job.id }}">
-                    <button type="button" class="ui icon button blue basic" title="Modifier le job">
+                    <button type="button" class="ui icon button blue basic" title="Edit job">
                         <i class="edit icon"></i>
                     </button>
                 </a>
                 <button type="button" class="ui icon button red basic delete-btn" value="{{ job.id }}"
-                    title="Supprimer le job">
+                    title="Delete job">
                     <i class="trash icon"></i>
                 </button>
             </td>
             <td>
                 <a href="/logs/{{ job.id }}">
-                    <button type="button" class="ui icon button teal basic" title="Voir les logs">
+                    <button type="button" class="ui icon button teal basic" title="View logs">
                         <i class="file alternate outline icon"></i>
                     </button>
                 </a>
